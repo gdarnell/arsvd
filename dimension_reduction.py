@@ -74,7 +74,7 @@ def stabilityMeasure(X, d_max, B=5, power_iters=2):
 	for k in range(d_max):
 		stability = 0
 		for i in range(0,B-1):
-			for j in range(1,B):
+			for j in range(i+1,B):
 				corr = stats.spearmanr(singular_basis[i,:,k],singular_basis[j,:,k])[0]
 				stability = stability + abs(corr)
 		N = B*(B-1)/2
