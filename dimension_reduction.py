@@ -5,7 +5,7 @@ import time
 import numpy as np
 from scipy import linalg, stats
 
-def rsvd(X, dstar, power_iters=2):
+def rsvd(X, dstar, power_iters=2, delta=10):
 	""" Perform rsvd algorithm on input matrix.
 		Method must be supplied dstar.
 		Returns truncated svd (U,S,V).
@@ -20,6 +20,9 @@ def rsvd(X, dstar, power_iters=2):
    	power_iters : int
    		default: 2
    		Number of power iterations used (random matrix multiplications)
+   	delta : int
+   		default: 10
+   		oversampling parameter (to improve numerical stability)
     Returns
 	-------
 	int matrix
@@ -29,12 +32,14 @@ def rsvd(X, dstar, power_iters=2):
     int matrix
     	Matrix of right singular vectors.
     """
+        transpose = False
 	if(X.shape[0] < X.shape[1]):
-		X = X.T  # transpose X
+		X = X.T
+                transpose = True
 	if(power_iters < 1):
 		power_iters = 1
 	# follows manuscript notation as closely as possible
-	P = np.random.randn(X.shape[1],dstar)
+	P = np.random.randn(X.shape[0],dstar+delta)
 	for i in range(power_iters):
 		P = np.dot(X.T,P)
 		P = np.dot(X,P)
@@ -42,6 +47,14 @@ def rsvd(X, dstar, power_iters=2):
 	B = np.dot(Q.T,X)
 	U,S,V = linalg.svd(B)
 	U = np.dot(Q,U)
+
+        # remove extra dimensionality incurred by delta
+        U = U[:,0:dstar]
+        S = S[0:dstar]
+        
+        if(transpose):
+                return V.T,S,U.T
+        # else
 	return U,S,V
 
 def stabilityMeasure(X, d_max, B=5, power_iters=2):
