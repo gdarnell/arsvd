@@ -4,7 +4,7 @@ import numpy as np
 from random import expovariate
 from scipy import linalg
 
-def simData(num_rows, num_cols, k, dstar):
+def simSphericalData(num_rows, num_cols, k, dstar):
 	""" Generate data with lower latent rank
 	Parameters
 	----------
@@ -42,3 +42,50 @@ def simData(num_rows, num_cols, k, dstar):
 	signal = np.dot(np.dot(U,S),V.T) # U * S * V'
 	
 	return signal + noise
+
+def simGeneticData(num_indvs, num_snps, num_populations=10):
+        """ Generate genetic data with latent population structure
+	Parameters
+	----------
+	num_indvs : int
+				total number of individuals to generate
+	num_snps : int
+                                number of snps (genetic variants) per individual
+        num_populations : int
+                                total number of latent (ancestral) populations from which
+                                each individual is derived
+	Returns
+	-------
+	int matrix
+		Genetic data matrix (individuals x snps) with latent population structure
+        int matrix
+                Phenotype generated from latent population structure
+	"""
+        alpha = np.ones((num_populations,)) / num_populations
+        # generate admixture proportions for each individual
+        population_proportion = np.random.dirichlet(alpha, size=num_indvs)
+        # allele frequencies for all snps in each population
+        # snps x population_freq
+        allele_freq = np.array([np.random.beta(1, 1, size=num_snps) for p in range(num_populations)]).T
+        genotypes = np.zeros((num_indvs, num_snps))
+        for i in range(num_indvs):
+                # each individual has two latent indicators z_1 and z_2
+                # for which population each SNP is derived from
+                z_1 = np.random.multinomial(1, population_proportion[i], size=num_snps)
+                z_2 = np.random.multinomial(1, population_proportion[i], size=num_snps)
+                indv_allele_freq_1 = np.sum(allele_freq * z_1, axis=1)
+                indv_allele_freq_2 = np.sum(allele_freq * z_2, axis=1)
+                x_1 = np.random.binomial(1, indv_allele_freq_1)
+                x_2 = np.random.binomial(1, indv_allele_freq_2)
+                indv_snps = x_1 + x_2
+                genotypes[i,:] = indv_snps
+
+        phenotype = np.zeros((num_indvs,))
+        for i in range(num_indvs):
+                # only population "1" is affected
+                likelihood = 0.5 * population_proportion[i,1] + 0.1 * (1-population_proportion[i,1])
+                pheno_status = np.random.binomial(1, likelihood)
+                phenotype[i] = pheno_status
+
+        return(genotypes,phenotype)
+        
